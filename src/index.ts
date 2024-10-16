@@ -1,7 +1,9 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import poolDB from "./config/database.js";
 dotenv.config();
+
 
 const SERVER_PORT = process.env.SERVER_PORT || 8000;
 const SERVER_HOSTNAME = process.env.SERVER_HOSTNAME || "localhost";
@@ -12,8 +14,15 @@ app.use(cors({
     origin: `http://${SERVER_HOSTNAME}:${CLIENT_PORT}`
 }));
 
-app.get("/", (req, res) => {
-    res.send("Hello World!");
+app.get("/", async (req, res) => {
+    try {
+        const admin = await poolDB.query("SELECT * FROM admin");
+        res.json(admin.rows);
+               
+        
+    } catch (error) {
+        console.log(error);
+    }
 });
 
 app.listen(SERVER_PORT, () => {
