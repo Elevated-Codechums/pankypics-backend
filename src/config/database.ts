@@ -16,12 +16,12 @@ poolDB.on('error', (err) => {
     console.error('Unexpected error on idle client', err);
   });
 
-  poolDB.connect((err, client, release) => {
-    if (err) {
-    return console.error('Error acquiring client', err.stack);
-    }
-    console.log('Connected to the database successfully');
-    release();
+poolDB.connect((err, client, release) => {
+if (err) {
+return console.error('Error acquiring client', err.stack);
+}
+console.log('Connected to the database successfully');
+release();
 });
 
 export default poolDB;
