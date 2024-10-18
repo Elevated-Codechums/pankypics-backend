@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import poolDB from '../config/database.js';
 
 dotenv.config();
 
@@ -25,4 +26,26 @@ const createToken = (id: string) => {
     });
 };
 
-export default createToken;
+export const login_get = (req: any, res: any) => {
+    res.send('login page');
+};
+
+export const login_post = async (req: any, res: any) => {
+    const { name, email, password } = req.body;
+    try {
+        res.send('login post');
+        // const admin = await poolDB.query("SELECT * FROM admin WHERE email = $1", [email]);
+        // if (admin.rows.length > 0) {
+        //     const token = createToken(admin.rows[0].id);
+        //     res.cookie('jwt', token, { httpOnly: true, maxAge: maxAge * 1000 });
+        //     res.status(200).json({ admin: admin.rows[0].id });
+        // } else {
+        //     res.status(400).json({ error: 'Incorrect email or password' });
+        // }
+    } catch (err) {
+        const errors = handleErrors(err);
+        res.status(400).json({ errors });
+    }
+};
+
+

@@ -2,17 +2,21 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import poolDB from "./config/database.js";
+import authRouter from "./routers/authrouters.js";
 dotenv.config();
 
 
-const SERVER_PORT = process.env.SERVER_PORT || 8000;
+
+const SERVER_PORT = process.env.SERVER_PORT || 4000;
 const SERVER_HOSTNAME = process.env.SERVER_HOSTNAME || "localhost";
 const CLIENT_PORT = process.env.CLIENT_PORT || 3000;
 const app = express();
 
+//middleware
 app.use(cors({
     origin: `http://${SERVER_HOSTNAME}:${CLIENT_PORT}`
 }));
+app.use(express.json());
 
 app.get("/", async (req, res) => {
     try {
@@ -24,7 +28,7 @@ app.get("/", async (req, res) => {
         console.log(error);
     }
 });
-
+app.use(authRouter);
 app.listen(SERVER_PORT, () => {
     console.log(`Server is running on port http://${SERVER_HOSTNAME}:${SERVER_PORT}`);
 });

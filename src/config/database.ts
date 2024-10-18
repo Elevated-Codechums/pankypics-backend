@@ -24,4 +24,6 @@ console.log('Connected to the database successfully');
 release();
 });
 
+
+
 export default poolDB;
