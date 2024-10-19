@@ -2,7 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import poolDB from "./config/database.js";
-import authRouter from "./routers/authrouters.js";
+import authRouter from "./routers/authRouters.js";
 dotenv.config();
 
 
