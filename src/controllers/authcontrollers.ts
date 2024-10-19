@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import poolDB from '../config/database.js';
+import { Request, Response, NextFunction } from 'express';
 
 dotenv.config();
 
@@ -30,21 +31,25 @@ export const login_get = (req: any, res: any) => {
     res.send('login page');
 };
 
-export const login_post = async (req: any, res: any) => {
+export const login_post = async (req: Request, res: Response, next: NextFunction) => {
     const { name, email, password } = req.body;
     try {
-        res.send('login post');
-        // const admin = await poolDB.query("SELECT * FROM admin WHERE email = $1", [email]);
-        // if (admin.rows.length > 0) {
-        //     const token = createToken(admin.rows[0].id);
-        //     res.cookie('jwt', token, { httpOnly: true, maxAge: maxAge * 1000 });
-        //     res.status(200).json({ admin: admin.rows[0].id });
-        // } else {
-        //     res.status(400).json({ error: 'Incorrect email or password' });
-        // }
+        const result = await poolDB.query("SELECT admin_name, admin_email, password FROM admin where admin_email = $1", [email]);
+        const admin_name = result.rows[0].admin_name;
+        const admin_email = result.rows[0].admin_email;
+        const admin_password = result.rows[0].password;
+        if (email === admin_email && password === admin_password && name === admin_name) {
+            const token = createToken(result.rows[0].id);
+            res.cookie('jwt', token, { httpOnly: true, maxAge: maxAge * 1000 * 2 });
+            res.status(200).json(`login Successful jwt token: ${token}`);
+        } else {
+            res.status(400).json({ error: 'Incorrect email' });
+        }
+        next();
     } catch (err) {
         const errors = handleErrors(err);
         res.status(400).json({ errors });
+        next();
     }
 };
 
