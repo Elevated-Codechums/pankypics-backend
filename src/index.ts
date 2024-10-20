@@ -2,8 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import poolDB from "./config/database.js";
-import authRouter from "./routers/authrouters.js";
-import { checkAdmin } from "./middleware/authmiddleware.js";
+import authRouter from "./routers/authRouters.js";
+import { checkAdmin } from "./middleware/authMiddleware.js";
 dotenv.config();
 
 
