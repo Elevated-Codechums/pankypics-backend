@@ -2,6 +2,7 @@ import { createToken, maxAge } from '../helpers/jwtHelper.js';
 import dotenv from 'dotenv';
 import poolDB from '../config/database.js';
 import { hashPassword, comparePassword } from '../helpers/passHelper.js';
+import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 
 dotenv.config();

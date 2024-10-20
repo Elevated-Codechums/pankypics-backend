@@ -1,3 +1,4 @@
+
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import poolDB from "../config/database.js";
@@ -21,10 +22,12 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
         res.redirect('/admin/login');
     }
 }
+
 export const checkAdmin = (req: Request, res: Response, next: NextFunction) => {
     const token = req.cookies.jwt;
     if (token) {
         jwt.verify(token, `${process.env.JWT_SECRET}`, (err: any, decodedToken: any) => {
+
             if (err) {
                 console.log(err.message);
                 res.locals.admin = null;
@@ -36,6 +39,7 @@ export const checkAdmin = (req: Request, res: Response, next: NextFunction) => {
                     res.locals.admin = admin.rows[0];
                     next();
                 })();
+
             }
         });
     } else {
