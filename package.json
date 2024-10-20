@@ -24,6 +24,8 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.13.0",
+    "@types/multer": "^1.4.12",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",
     "cookie-parser": "^1.4.7",
@@ -31,6 +33,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "jsonwebtoken": "^9.0.2",
+    "multer": "1.4.5-lts.1",
     "pg": "^8.13.0",
     "validator": "^13.12.0"
   }
