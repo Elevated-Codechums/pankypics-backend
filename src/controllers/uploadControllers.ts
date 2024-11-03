@@ -9,6 +9,9 @@ export async function uploadPost(req: Request, res: Response, next: NextFunction
     // Call multer to handle the file
     upload(req, res, async (err) => {
 
+        const albumName = req.body.albumName || "default-album";
+        const file = req.file;
+
         try {
             if (err) {
                 console.error("Multer Error:", err);
@@ -22,7 +25,7 @@ export async function uploadPost(req: Request, res: Response, next: NextFunction
             }
 
             // Proceed with upload to Google Cloud Storage
-            const publicURL = await uploadToGCS(req.file, 'photos');
+            const publicURL = await uploadToGCS(file, albumName);
             res.status(200).send({
                 message: 'File uploaded successfully',
                 url: publicURL
