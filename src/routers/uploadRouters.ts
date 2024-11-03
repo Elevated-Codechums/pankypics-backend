@@ -1,8 +1,10 @@
 import express from 'express';
-import * as uploadControllers from '../controllers/uploadControllers.js';
+
+import {uploadGet, uploadPost} from '../controllers/uploadControllers.js';
 
 const uploadRouter = express.Router();
 
-uploadRouter.post('/new/upload', uploadControllers.upload_post);
+uploadRouter.post('/upload/photo', uploadPost);
+uploadRouter.get('/upload/get_photo', uploadGet);
 
 export default uploadRouter;

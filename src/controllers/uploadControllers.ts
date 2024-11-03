@@ -1,59 +1,42 @@
-import dotenv from 'dotenv';
 import { Request, Response, NextFunction } from 'express';
-import multer from 'multer';
-import { Storage } from '@google-cloud/storage';
+import { uploadToGCS } from '../helpers/uploadHelpers.js';
+import { multerGoogleCloadStorage } from '../config/storage.js';
 
-dotenv.config();
+export async function uploadPost(req: Request, res: Response, next: NextFunction) {
+    // Initialize multer to handle file upload
+    const upload = multerGoogleCloadStorage.single('photo');
 
-export const upload_post = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
-    try {
-        const storage = new Storage({
-            keyFilename: process.env.GOOGLE_CLOUD_KEYFILENAME
-        });
+    // Call multer to handle the file
+    upload(req, res, async (err) => {
 
-        const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
-        const keyFilename = process.env.GOOGLE_CLOUD_KEYFILENAME;
-        const bucketName = process.env.GOOGLE_CLOUD_BUCKET_NAME;
-
-        if (!bucketName) {
-            return res.status(400).send('Bucket name is not defined.');
-        }
-        const bucket = storage.bucket(bucketName);
-
-        const upload = multer({
-            storage: multer.memoryStorage()
-        });
-
-        upload.single('file')(req, res, (err: any) => {
+        try {
             if (err) {
-                return res.status(400).send('Something went wrong!');
+                console.error("Multer Error:", err);
+                throw new Error('Error uploading file');
             }
-        });
 
-        const file = req.file;
-        if (!file) {
-            return res.status(400).send('No file uploaded.');
+            // Check if file is present
+            if (!req.file) {
+                console.error("No file found in request");
+                throw new Error('Photo file is required');
+            }
+
+            // Proceed with upload to Google Cloud Storage
+            const publicURL = await uploadToGCS(req.file, 'photos');
+            res.status(200).send({
+                message: 'File uploaded successfully',
+                url: publicURL
+            });
+        } catch (error) {
+            console.error("Caught Error:", error); // Log detailed error
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            res.status(400).send({ error: errorMessage });
+            next(error);
         }
+    });
+}
 
-        const fileName = file.originalname + '_' + Date.now();
 
-
-        const blob = bucket.file(fileName);
-        const blobStream = blob.createWriteStream({
-            metadata: {
-                contentType: file.mimetype 
-            }
-        });
-
-        blobStream.on('error', (err: any) => {
-            console.log(err);
-        });
-
-        blobStream.on('finish', () => {
-            res.redirect('/');
-        });
-
-    } catch (error) {
-        console.log(error);
-    }
+export const uploadGet = (req: Request, res: Response) => {
+    res.send('get photo');
 };
