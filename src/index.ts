@@ -4,6 +4,8 @@ import cors from "cors";
 import poolDB from "./config/database.js";
 import authRouter from "./routers/authRouters.js";
 import { checkAdmin } from "./middleware/authMiddleware.js";
+import cookieparser from "cookie-parser";
+import uploadRouter from "./routers/uploadRouters.js";
 dotenv.config();
 
 
@@ -12,7 +14,6 @@ const SERVER_PORT = process.env.SERVER_PORT || 4000;
 const SERVER_HOSTNAME = process.env.SERVER_HOSTNAME || "localhost";
 const CLIENT_PORT = process.env.CLIENT_PORT || 3000;
 const app = express();
-import cookieparser from "cookie-parser";
 
 
 //middleware
@@ -37,6 +38,10 @@ app.get("/", async (req, res) => {
 
 
 app.use(authRouter);
+
+app.use(uploadRouter);
+
+
 app.listen(SERVER_PORT, () => {
     console.log(`Server is running on port http://${SERVER_HOSTNAME}:${SERVER_PORT}`);
 });
