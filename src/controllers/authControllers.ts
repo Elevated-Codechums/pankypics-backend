@@ -6,12 +6,6 @@ import { Request, Response, NextFunction } from 'express';
 
 dotenv.config();
 
-export const login_get = (req: Request, res: Response) => {
-    res.send('login page');
-};
-export const signup_get = (req: any, res: any) => {
-    res.send('signup page');
-};
 
 export const signup_post = async (req: Request, res: Response, next: NextFunction) => {
     const { name, email, password, key } = req.body;

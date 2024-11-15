@@ -6,6 +6,7 @@ import authRouter from "./routers/authRouters.js";
 import { checkAdmin } from "./middleware/authMiddleware.js";
 import cookieparser from "cookie-parser";
 import uploadRouter from "./routers/uploadRouters.js";
+import albumsRouter from "./routers/albumRouters.js";
 dotenv.config();
 
 
@@ -40,6 +41,8 @@ app.get("/", async (req, res) => {
 app.use(authRouter);
 
 app.use(uploadRouter);
+
+app.use(albumsRouter);
 
 
 app.listen(SERVER_PORT, () => {
