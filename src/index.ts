@@ -19,7 +19,8 @@ const app = express();
 
 //middleware
 app.use(cors({
-    origin: `http://${SERVER_HOSTNAME}:${CLIENT_PORT}`
+    origin: `http://${SERVER_HOSTNAME}:${CLIENT_PORT}`,
+    credentials: true
 }));
 app.use(express.json());
 app.use(cookieparser());
