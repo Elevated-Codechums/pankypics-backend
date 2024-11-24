@@ -1,54 +1,53 @@
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
-import poolDB from '../config/database.js';
 import { Request, Response, NextFunction } from 'express';
-dotenv.config();
+import { verifyToken } from '../helpers/jwtHelper.js';
+import poolDB from '../config/database.js';
 
-interface AdminTokenPayload {
-    admin_id: string;
-    iat?: number; // Issued at timestamp
-    exp?: number; // Expiry timestamp
-}
+export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
+    const token = req.cookies.token;
 
-export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-    const token = req.cookies.jwt;
-    if (token) {
-        jwt.verify(token, `${process.env.JWT_SECRET}`, (err: any, decodedToken: jwt.JwtPayload | string | undefined) => {
-            if (err) {
-                console.log(err.message);
-                res.redirect('/login');
-            } else {
-                console.log(decodedToken);
-                next();
-            }
-        });
-    } else {
-        res.redirect('/login');
+    if (!token) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return; // Ensure no further execution
+    }
+
+    try {
+        const decoded = verifyToken(token);
+        req.body.admin = decoded; // Attach admin data to the request
+        next(); // Call the next middleware or route handler
+    } catch (error) {
+        res.status(401).json({ error: 'Invalid token' });
     }
 };
 
-export const checkAdmin = async (req: Request, res: Response, next: NextFunction) => {
-    const token = req.cookies.jwt;
-    if (token) {
-        try {
-            const decodedToken = jwt.verify(token, `${process.env.JWT_SECRET}`) as AdminTokenPayload;
-            const admin_id = decodedToken.admin_id;
+export const checkAuthentication = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const token = req.cookies.token;
 
-            if (!admin_id) {
-                console.log('admin_id not found in token');
-                res.locals.admin = null;
-                return next();
-            }
-
-            const result = await poolDB.query('SELECT admin_name, admin_email, password FROM admin WHERE admin_id = $1', [admin_id]);
-
-            res.locals.admin = result.rows[0] || null;
-        } catch (err) {
-            console.error(err);
-            res.locals.admin = null;
+        if (!token) {
+            res.status(401).json({ error: 'Unauthorized: No token provided' });
+            return;
         }
-    } else {
-        res.locals.admin = null;
+
+        const decoded = verifyToken(token);
+        if (!decoded || !decoded.admin_id) {
+            res.status(401).json({ error: 'Unauthorized: Invalid token' });
+            return;
+        }
+
+        // Fetch admin details from the database
+        const query = 'SELECT admin_name, admin_email FROM admin WHERE admin_id = $1';
+        const values = [decoded.admin_id];
+        const result = await poolDB.query(query, values);
+
+        if (result.rowCount === 0) {
+            res.status(404).json({ error: 'Admin not found' });
+            return;
+        }
+
+        const admin = result.rows[0];
+
+        res.status(200).json({ admin });
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message });
     }
-    next();
 };

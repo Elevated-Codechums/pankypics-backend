@@ -1,87 +1,123 @@
-import { createToken, maxAge } from '../helpers/jwtHelper.js';
-import dotenv from 'dotenv';
-import poolDB from '../config/database.js';
-import { hashPassword, comparePassword } from '../helpers/passHelper.js';
 import { Request, Response } from 'express';
-
+import poolDB from '../config/database.js';
+import { hashPassword, verifyPassword } from '../helpers/passHelper.js';
+import { generateToken, verifyToken } from '../helpers/jwtHelper.js';
+import dotenv from 'dotenv';
 dotenv.config();
 
-export const signup_post = async (req: Request, res: Response) => {
-    const { name, email, password, key } = req.body;
+interface Admin {
+    admin_name: string;
+    admin_email: string;
+    password: string;
+    key: string;
+    unique_id: number;
+}
+
+export const registerAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
-        // Check for valid admin key
+        const { admin_name, admin_email, password, key }: Admin = req.body;
+
         if (key !== process.env.ADMIN_KEY) {
-            return res.status(400).json({ error: 'Invalid key' });
+            res.status(401).json({ error: 'Invalid key' });
+            return;
         }
 
-        // Hash the password before storing
         const hashedPassword = await hashPassword(password);
+        const unique_id = Date.now(); // Simple unique ID generator
+        const query = 'INSERT INTO admin (admin_name, admin_email, password, unique_id) VALUES ($1, $2, $3, $4) RETURNING admin_id';
+        const values = [admin_name, admin_email, hashedPassword, unique_id];
 
-        // Insert new admin into the database
-        const result = await poolDB.query('INSERT INTO admin (admin_name, admin_email, password) VALUES ($1, $2, $3) RETURNING *', [
-            name,
-            email,
-            hashedPassword
-        ]);
-
-        // Generate a JWT token for the newly created admin
-        const token = createToken(result.rows[0].admin_id);
-
-        // Send token as a cookie
-        res.cookie('jwt', token, { httpOnly: true, maxAge: maxAge * 1000 });
-
-        // Return a success message with the JWT token
-        return res.status(201).json({ message: 'Signup successful', jwt: token });
-    } catch (err) {
-        // Handle different error scenarios
-        if (err instanceof Error) {
-            return res.status(400).json({ error: err.message });
-        }
-        return res.status(400).json({ error: 'An unexpected error occurred' });
+        const result = await poolDB.query(query, values);
+        res.status(201).json({
+            success: 'Admin registered successfully',
+            admin: {
+                name: admin_name,
+                email: admin_email,
+                password: hashedPassword
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message });
     }
 };
 
-export const login_post = async (req: Request, res: Response) => {
-    const { email, password } = req.body;
+export const loginAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
-        // Check if the admin email exists in the database
-        const result = await poolDB.query('SELECT admin_id, admin_email, password FROM admin WHERE admin_email = $1', [email]);
+        const { admin_email, password } = req.body;
+        const query = 'SELECT * FROM admin WHERE admin_email = $1';
+        const values = [admin_email];
 
-        if (result.rows.length === 0) {
-            return res.status(400).json({ error: 'Invalid credentials' });
+        const result = await poolDB.query(query, values);
+        if (result.rowCount === 0) {
+            res.status(404).json({ error: 'Admin not found' });
+            return;
         }
 
-        // Extract password from database
-        const admin_password = result.rows[0].password;
+        const admin = result.rows[0];
+        const isPasswordValid = await verifyPassword(password, admin.password);
 
-        // Compare provided password with stored password
-        const auth = await comparePassword(password, admin_password);
-        if (!auth) {
-            return res.status(400).json({ error: 'Invalid password' });
+        if (!isPasswordValid) {
+            res.status(401).json({ error: 'Invalid credentials' });
+            return;
         }
 
-        // Generate a JWT token for the logged-in admin
-        const token = createToken(result.rows[0].admin_id);
-
-        // Send token as a cookie
-        res.cookie('jwt', token, { httpOnly: true, maxAge: maxAge * 1000 });
-
-        // Return success message with the JWT token
-        console.log('Login successful');
-        return res.status(200).json({ message: 'Login successful', jwt: token });
-    } catch (err) {
-        // Handle different error scenarios
-        if (err instanceof Error) {
-            return res.status(400).json({ error: err.message });
-        }
-        return res.status(400).json({ error: 'An unexpected error occurred' });
+        const token = generateToken({ admin_id: admin.admin_id, unique_id: admin.unique_id });
+        res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+        res.status(200).json({
+            success: 'Login successful',
+            admin: {
+                name: admin.admin_name,
+                email: admin.admin_email
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message });
     }
 };
 
-export const logout = async (req: Request, res: Response) => {
-    // Clear the JWT cookie to log the user out
-    res.cookie('jwt', '', { maxAge: 1 });
+export const checkAuthentication = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // Check if the token is in cookies
+        const token = req.cookies?.token;
+        if (!token) {
+            res.status(401).json({ error: 'Unauthorized: No token provided' });
+            return;
+        }
 
-    // Redirect to the homepage or login page
-    res.redirect('/');
+        // Verify the token
+        const decoded = verifyToken(token);
+        if (!decoded || !decoded.admin_id) {
+            res.status(401).json({ error: 'Unauthorized: Invalid token' });
+            return;
+        }
+
+        // Fetch admin details from the database
+        const query = 'SELECT admin_name, admin_email FROM admin WHERE admin_id = $1';
+        const values = [decoded.admin_id];
+        const result = await poolDB.query(query, values);
+
+        if (result.rowCount === 0) {
+            res.status(404).json({ error: 'Admin not found' });
+            return;
+        }
+
+        const admin = result.rows[0];
+
+        // Return admin details
+        res.status(200).json({
+            success: 'You are authenticated',
+            admin: {
+                name: admin.admin_name,
+                email: admin.admin_email
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message });
+    }
+};
+
+export const logoutAdmin = (req: Request, res: Response) => {
+    res.clearCookie('token');
+    console.log('Logout successful');
+    res.status(200).json({ message: 'Logout successful' });
 };
