@@ -1,18 +1,20 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+
 dotenv.config();
 
-export const maxAge = 7 * 24 * 60 * 60;
+const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 
-export const createToken = (id: string) => {
-    return jwt.sign({ id
-      }, `${process.env.JWT_SECRET}`, {
-          expiresIn: maxAge
-      });
-  };
+export const maxAge = process.env.JWT_MAX_AGE ? parseInt(process.env.JWT_MAX_AGE) : 7 * 24 * 60 * 60;
 
+export const generateToken = (payload: object): string => {
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: maxAge });
+};
 
-// TODO: Check if the function verifyToken is needed or not (Rishit Jain)
-export const verifyToken = (token: string) => {
-    return jwt.verify(token, `${process.env.JWT_SECRET}`);
-    };
+export const verifyToken = (token: string): any => {
+    try {
+        return jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+        return null; // Explicitly return null for better error handling
+    }
+};
