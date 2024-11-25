@@ -17,9 +17,14 @@ export async function uploadPhotoWithAlbum(req: Request, res: Response, next: Ne
         const albumName = req.body.albumName;
         const albumDescription = req.body.albumDescription;
         const files = req.files as Express.Multer.File[];
+        const photoCaptions = req.body.photoCaptions; // Assuming photoCaptions is an array of captions
 
         if (!files || files.length === 0) {
             return res.status(400).send({ error: 'At least one photo file is required' });
+        }
+
+        if (!photoCaptions || photoCaptions.length !== files.length) {
+            return res.status(400).send({ error: 'Photo captions are required for each photo' });
         }
 
         try {
@@ -34,8 +39,14 @@ export async function uploadPhotoWithAlbum(req: Request, res: Response, next: Ne
             for (let [index, file] of files.entries()) {
                 const photoId = parseInt(crypto.randomBytes(4).toString('hex'), 16);
                 const photoURL = publicURLs[index];
+                const photoCaption = photoCaptions[index];
 
-                await poolDB.query('INSERT INTO photos (photo_id, photo_url, album_id) VALUES ($1, $2, $3)', [photoId, photoURL, albumId]);
+                await poolDB.query('INSERT INTO photos (photo_id, photo_url, album_id, photo_caption) VALUES ($1, $2, $3, $4)', [
+                    photoId,
+                    photoURL,
+                    albumId,
+                    photoCaption
+                ]);
             }
 
             res.status(200).send({
@@ -59,7 +70,6 @@ export async function uploadPhotoWithoutAlbum(req: Request, res: Response, next:
     upload(req, res, async (err) => {
         const photoId = parseInt(crypto.randomBytes(4).toString('hex'), 16);
         const file = req.file;
-        const photoName = req.body.photoName;
         const photoCaption = req.body.photoCaption;
 
         try {
@@ -76,8 +86,12 @@ export async function uploadPhotoWithoutAlbum(req: Request, res: Response, next:
 
             // Proceed with upload to Google Cloud Storage
             const publicURL = await uploadPhotosToGCS_WithoutAlbum(photoId, file);
+
+            await poolDB.query('INSERT INTO photos (photo_id, photo_url, photo_caption) VALUES ($1, $2, $3)', [photoId, publicURL, photoCaption]);
+
             res.status(200).send({
                 message: 'File uploaded successfully!',
+                caption: photoCaption,
                 url: publicURL
             });
         } catch (error) {
